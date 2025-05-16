@@ -21,7 +21,7 @@ B = L/(N_B+1) #baffle spacing
 Y = 0.014 #Pitch, can be modified
 
 #Hot side analysis
-m_dot_1 =  #Initial guess
+m_dot_1 = 0.5 #Initial guess
 m_dot_2 = 0.45 #Initial guess
 m_dot_tube = m_dot_2/N
 v_tube = m_dot_tube*4/(rho_w*np.pi*d_i**2)
@@ -49,10 +49,12 @@ delta_p_1 = delta_p_sh + delta_p_noz_1
 #Need iterative process to find optimal mass flow rate
 
 #Thermal analysis
-Nu_i = 
-Nu_o = 
+Nu_i = 0.023 * Re_tube**0.8 * Pr**0.3
+c = 0.15 #0.15 for square pitch, 0.2 for triangular
+Nu_o = c * Re_sh**0.6 * Pr**0.3
 #Reynolds no. adjustment?
-h_i =
-h_o =
-H = ()**-1
+h_i = Nu_i * k_w/d_i
+h_o = Nu_o * k_w/d_o
+H = (1/h_i + np.pi * d_i**2 /4 * math.log(d_o/d_i) / (2*np.pi*k_tube*L) + d_i**2/(d_o**2 * h_o))**-1
+print(B, v_tube, Re_tube, v_noz_2, delta_p_tube, delta_p_ends, delta_p_noz_2, delta_p_2, A_sh, v_sh, d_chic_sh, Re_sh, delta_p_sh, v_noz_1, delta_p_noz_1, delta_p_1, Nu_i, Nu_o, h_i, h_o, H)
 #Need iteration to get T_1_out and T_2_out, correction factor F needed for multiple passes
