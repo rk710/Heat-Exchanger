@@ -43,23 +43,23 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     delta_p_tube = 0.5 * rho_w * v_tube**2 * f * L/d_i
     sigma = N*d_i**2/d_sh**2
     K_c = 0.45
-    K_e = 0.8 #Obtain K_c and K_e from figure 8 in handout, function of sigma hence are just constant
-    delta_p_ends = 0.5*rho_w*v_tube**2 * (K_c + K_e)
+    K_e = 0.8 #Obtain K_c and K_e from figure 8 in handout, function of sigma hence are just constant. Use turbulent values.
+    delta_p_ends = 0.5*rho_w*v_tube**2 * (K_c + K_e) #Must modify for multiple tube passes
     delta_p_noz_2 = rho_w * v_noz_2**2
     delta_p_2 = (delta_p_tube + delta_p_ends + delta_p_noz_2)/100000 #gives pressure in bar
 
     #Cold side analysis
     A_sh = d_sh/Y * (Y-d_o) * B
     v_sh = m_dot_1 / (rho_w*A_sh)
-    d_chic_sh = d_sh * A_sh*4/(np.pi*d_sh**2) #Varies with number of passes
+    d_chic_sh = d_sh * A_sh*4/(np.pi*d_sh**2) #Varies with number of shell passes
     global Re_sh
     Re_sh = rho_w * v_sh * d_chic_sh / mu
-    alpha = 0.34 #0.2 triangular pitch, 0.34 square
+    alpha = 0.2 #0.2 triangular pitch, 0.34 square
     delta_p_sh = 4*alpha*Re_sh**-0.15 *N*rho_w*v_sh**2
     v_noz_1 = m_dot_1*4/ (rho_w*np.pi*d_noz**2)
     delta_p_noz_1 = rho_w * v_noz_1**2
     delta_p_1 = (delta_p_sh + delta_p_noz_1)/100000
-    return delta_p_1, delta_p_2 #Return (dp_cold, dp_hot) in bar
+    return delta_p_1, delta_p_2 #Return (delta_p_1, delta_p_2) in bar
 
 def find_flow_rates(tol=1e-3, max_iter=1000):
     global m_dot_1
@@ -93,22 +93,20 @@ def find_flow_rates(tol=1e-3, max_iter=1000):
     print(m_dot_1, m_dot_2)
     return m_dot_1, m_dot_2, delta_p_1, delta_p_2, pressure_cold, pressure_hot
 
-# Log Mean Temperature Difference function
+#LMTD Function
 def delta_T_lm(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
     dT1 = T_hot_in - T_cold_out
     dT2 = T_hot_out - T_cold_in
-    # Avoid division by zero or log of zero
+    #Avoid division by zero or log of zero
     if dT1 == dT2:
         return dT1
     if dT1 <= 0 or dT2 <= 0:
-        return 1e-6  # small positive value to penalize invalid regions
+        return 1e-6  #Small positive value to penalize invalid regions
     return (dT1 - dT2) / np.log(dT1 / dT2)
 
-# Objective function: NEGATIVE Q to maximize it
+#Objective function, negative Q to maximize it
 def objective(x):
     T_cold_out, T_hot_out = x
-    m_dot_1 = 0.5
-    m_dot_2 = 0.47
 
     # Energy balance terms
     Q1 = m_dot_1 * Cp * (T_cold_out - T_cold_in)
@@ -116,42 +114,40 @@ def objective(x):
     dt_lm = delta_T_lm(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
     Q_LMTD = H * A * dt_lm
 
-    # Penalize both mismatches
+    #Ensure energy balance
     error1 = Q1 - Q2
     error2 = Q1 - Q_LMTD
-
-    # Penalize mismatch in energy balance
     penalty = error1**2 + error2**2
 
-    print(Q1, Q2, Q_LMTD)
-
-    if abs(penalty) > 500:  # large energy imbalance → invalid solution
+    if penalty > 500:  #Penalty for energy imbalance
         return 1e6 + abs(penalty)**2
 
-    # Return negative Q → maximizing Q
+    #Want minimum value
     return penalty-Q_LMTD
 
 find_flow_rates()
 
 #Thermal analysis
 Nu_i = 0.023 * Re_tube**0.8 * Pr**0.3
-c = 0.15 #0.15 for square pitch, 0.2 for triangular
+c = 0.2 #0.15 for square pitch, 0.2 for triangular
 Nu_o = c * Re_sh**0.6 * Pr**0.3
 h_i = Nu_i * k_w/d_i
 h_o = Nu_o * k_w/d_o
 H = (1/h_i + np.pi * d_i**2 /4 * math.log(d_o/d_i) / (2*np.pi*k_tube*L) + d_i**2/(d_o**2 * h_o))**-1
 A = N * np.pi * d_i * L
 
-# Bounds for outlet temperatures: must lie between inlet temps
-bounds = [(T_cold_in, T_hot_in), (T_cold_in, T_hot_in)]  # (T1_out, T2_out)
+#Bounds for outlet temperatures, must lie between inlet temps
+bounds = [(T_cold_in, T_hot_in), (T_cold_in, T_hot_in)]
 
-# Run global optimization
 result = differential_evolution(objective, bounds, tol=1e-6)
 
-# Extract optimal values
 T_cold_out_optimal, T_hot_out_optimal = result.x
-Q_max = -result.fun  # negate back to get positive Q
+Q_max = -result.fun  
 
 print(T_cold_out_optimal, T_hot_out_optimal, Q_max)
 
-#correction factor F needed for multiple passes
+#square, Q_max = 13083. triangular = 14131
+
+#correction factor F needed for multiple passes (whenever not in counterflow)
+#dp_ends varies with tube passes
+#d_chich_sh varies with shell passes
