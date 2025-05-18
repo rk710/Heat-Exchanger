@@ -24,12 +24,12 @@ Y = 0.014 #Pitch, can be modified
 # Compressor data (cold side)
 cold_mass_flow = np.array([0.6580, 0.6290, 0.5830, 0.5380, 0.4670, 0.3920, 0.3210, 0.2790, 0.2210, 0.0])
 cold_pressure_rise = np.array([0.1584, 0.1958, 0.2493, 0.3127, 0.3723, 0.4436, 0.4950, 0.5318, 0.5739, 0.7077])
-cold_interp = interp1d(cold_mass_flow, cold_pressure_rise)
+cold_interp = interp1d(cold_mass_flow, cold_pressure_rise, fill_value="extrapolate")
 
 # Compressor data (hot side)
 hot_flow_lps = np.array([0.4360, 0.3870, 0.3520, 0.3110, 0.2600, 0.2290, 0.1670, 0.1180, 0.0690, 0.0010])
 hot_press_bar = np.array([0.0932, 0.1688, 0.2209, 0.2871, 0.3554, 0.4041, 0.4853, 0.5260, 0.5665, 0.6239])
-hot_interp = interp1d(hot_flow_lps, hot_press_bar)
+hot_interp = interp1d(hot_flow_lps, hot_press_bar, fill_value="extrapolate")
 
 def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     #Hot side analysis
@@ -44,7 +44,7 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     K_e = 0.8 #Obtain K_c and K_e from figure 8 in handout, function of sigma hence are just constant
     delta_p_ends = 0.5*rho_w*v_tube**2 * (K_c + K_e)
     delta_p_noz_2 = rho_w * v_noz_2**2
-    delta_p_2 = delta_p_tube + delta_p_ends + delta_p_noz_2
+    delta_p_2 = (delta_p_tube + delta_p_ends + delta_p_noz_2)/100000 #gives pressure in bar
 
     #Cold side analysis
     A_sh = d_sh/Y * (Y-d_o) * B
@@ -55,18 +55,18 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     delta_p_sh = 4*alpha*Re_sh**-0.15 *N*rho_w*v_sh**2
     v_noz_1 = m_dot_1*4/ (rho_w*np.pi*d_noz**2)
     delta_p_noz_1 = rho_w * v_noz_1**2
-    delta_p_1 = delta_p_sh + delta_p_noz_1
-    return delta_p_1, delta_p_2 # Return (dp_cold, dp_hot) in bar (need to implement this)
+    delta_p_1 = (delta_p_sh + delta_p_noz_1)/100000
+    return delta_p_1, delta_p_2 # Return (dp_cold, dp_hot) in bar
 
 # Iterative solver
 def find_flow_rates(tol=1e-3, max_iter=100): #interpolation has been failing need to try again
     m_dot_1 = 0.45 
     m_dot_2 = 0.5 
-    l_dot_1 = m_dot_1/(rho_w/1000)
-    l_dot_2 = m_dot_2/(rho_w/1000)
 
     for i in range(max_iter):
         delta_p_1, delta_p_2 = heat_exchanger_pressure_drop(m_dot_1, m_dot_2)
+        l_dot_1 = m_dot_1/(rho_w/1000)
+        l_dot_2 = m_dot_2/(rho_w/1000)
         pressure_cold = float(cold_interp(l_dot_1))
         pressure_hot = float(hot_interp(l_dot_2))
 
@@ -87,6 +87,7 @@ def find_flow_rates(tol=1e-3, max_iter=100): #interpolation has been failing nee
             m_dot_2 -= 0.01
         else:
             m_dot_2 += 0.01
+        print(m_dot_1, m_dot_2)
 
     return m_dot_1, m_dot_2, delta_p_1, delta_p_2, pressure_cold, pressure_hot
 #Need iterative process to find optimal mass flow rate
