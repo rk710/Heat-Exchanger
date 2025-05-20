@@ -73,13 +73,16 @@ NTU = (H * A_tube_inner) / Cp
 C_max = 4185 #at 60 degrees celsius
 C_min = Cp #at midpoint of 40 degrees celsius
 C_rel = C_max / C_min
-N_shells = 1 #N shell passes
+N_shells = 2 #N shell passes
 
 #Shell and Tube > https://www.mathworks.com/help/hydro/ref/entuheattransfer.html
+#[1] Holman, J. P. Heat Transfer. 9th ed. New York, NY: McGraw Hill, 2002.
+#[2] Shah, R. K. and D. P. Sekulic. Fundamentals of Heat Exchanger Design. Hoboken, NJ: John Wiley & Sons, 2003.
 
 #effectiveness for one shell pass, 2,4,6 tube passes
 e_1 = 2 / ( (1+C_rel+math.sqrt(1+(C_rel)**2)) * (1 + math.exp((-NTU)*math.sqrt(1+(C_rel)**2))) / (1 - math.exp((-NTU)*math.sqrt(1+(C_rel)**2))))
-#  e = ((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - 1)/((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - C_rel)
+#N shell passes, 2N,4N,6N tube passes
+e = ((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - 1)/((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - C_rel)
 
 Q_dot = e * Q_dot_max
 T_hot_out = T_hot_in - (Q_dot / Cp)
