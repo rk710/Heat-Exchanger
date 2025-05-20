@@ -42,8 +42,8 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     f=(1.82*math.log(Re_tube, 10) - 1.64)**-2
     delta_p_tube = 0.5 * rho_w * v_tube**2 * f * L/d_i
     sigma = N*d_i**2/d_sh**2
-    K_c = 0.45
-    K_e = 0.8 #Obtain K_c and K_e from figure 8 in handout, function of sigma hence are just constant. Use turbulent values.
+    K_c = 0.4*(1-0.75*sigma) + 0.1*10000/Re_tube
+    K_e = (1-2*sigma+1*sigma**2) - sigma*0.1*10000/Re_tube #Obtain K_c and K_e from figure 8 in handout, function of sigma hence are just constant. Use turbulent values.
     delta_p_ends = 0.5*rho_w*v_tube**2 * (K_c + K_e) #Must modify for multiple tube passes
     delta_p_noz_2 = rho_w * v_noz_2**2
     delta_p_2 = (delta_p_tube + delta_p_ends + delta_p_noz_2)/100000 #gives pressure in bar
@@ -53,7 +53,7 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2):
     v_sh = m_dot_1 / (rho_w*A_sh)
     d_chic_sh = d_sh * A_sh*4/(np.pi*d_sh**2) #Varies with number of shell passes
     global Re_sh
-    Re_sh = rho_w * v_sh * d_chic_sh / mu
+    Re_sh = rho_w * v_sh * d_chic_sh / mu                    
     alpha = 0.2 #0.2 triangular pitch, 0.34 square
     delta_p_sh = 4*alpha*Re_sh**-0.15 *N*rho_w*v_sh**2
     v_noz_1 = m_dot_1*4/ (rho_w*np.pi*d_noz**2)
