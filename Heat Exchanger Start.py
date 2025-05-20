@@ -94,13 +94,23 @@ def find_flow_rates(tol=1e-3, max_iter=1000):
     return m_dot_1, m_dot_2, delta_p_1, delta_p_2, pressure_cold, pressure_hot
 
 #LMTD Function
-def delta_T_lm(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
+def delta_T_lm_counter(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
     dT1 = T_hot_in - T_cold_out
     dT2 = T_hot_out - T_cold_in
     #Avoid division by zero or log of zero
     if dT1 == dT2:
         return dT1
     if dT1 <= 0 or dT2 <= 0:
+        return 1e-6  #Small positive value to penalize invalid regions
+    return (dT1 - dT2) / np.log(dT1 / dT2)
+
+def delta_T_lm_parallel(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
+    dT1 = T_hot_in - T_cold_in
+    dT2 = T_hot_out - T_cold_out
+    #Avoid division by zero or log of zero
+    if dT1 == dT2:
+        return dT1
+    if dT2 <= 0:
         return 1e-6  #Small positive value to penalize invalid regions
     return (dT1 - dT2) / np.log(dT1 / dT2)
 
@@ -111,8 +121,9 @@ def objective(x):
     # Energy balance terms
     Q1 = m_dot_1 * Cp * (T_cold_out - T_cold_in)
     Q2 = m_dot_2 * Cp * (T_hot_in - T_hot_out)
-    dt_lm = delta_T_lm(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
-    Q_LMTD = H * A * dt_lm
+    dt_lm = delta_T_lm_counter(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
+    #F = F_2sp(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
+    Q_LMTD = H * A * dt_lm #*F
 
     #Ensure energy balance
     error1 = Q1 - Q2
@@ -151,3 +162,4 @@ print(T_cold_out_optimal, T_hot_out_optimal, Q_max)
 #correction factor F needed for multiple passes (whenever not in counterflow)
 #dp_ends varies with tube passes
 #d_chich_sh varies with shell passes
+#add baffle losses
