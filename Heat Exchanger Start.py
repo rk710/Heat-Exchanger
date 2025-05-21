@@ -114,6 +114,21 @@ def delta_T_lm_parallel(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
         return 1e-6  #Small positive value to penalize invalid regions
     return (dT1 - dT2) / np.log(dT1 / dT2)
 
+def F_1_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
+    P = (T_cold_out-T_cold_in)/(T_hot_in-T_cold_in)
+    R = (T_hot_in-T_hot_out)/(T_cold_out-T_cold_in)
+
+    F = math.sqrt(R**2 + 1)/(R-1) * np.log10((1-P)/(1-P*R)) / (np.log10(((2/P) - 1 - R + math.sqrt(R**2 + 1))/((2/P) - 1 - R - math.sqrt(R**2 + 1))))
+    return F
+
+def F_2_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
+    P = (T_cold_out-T_cold_in)/(T_hot_in-T_cold_in)
+    R = (T_hot_in-T_hot_out)/(T_cold_out-T_cold_in)
+
+    F = math.sqrt(R**2 + 1)/(2*(R-1)) * np.log10((1-P)/(1-P*R)) / (np.log10(((2/P) - 1 - R + (2/P) * math.sqrt((1-P)*(1-P*R)) + math.sqrt(R**2 + 1))/((2/P) - 1 - R + (2/P) * math.sqrt((1-P)*(1-P*R)) - math.sqrt(R**2 + 1))))
+    return F
+
+
 #Objective function, negative Q to maximize it
 def objective(x):
     T_cold_out, T_hot_out = x
@@ -122,7 +137,7 @@ def objective(x):
     Q1 = m_dot_1 * Cp * (T_cold_out - T_cold_in)
     Q2 = m_dot_2 * Cp * (T_hot_in - T_hot_out)
     dt_lm = delta_T_lm_counter(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
-    #F = F_2sp(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
+    #F = F_1_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
     Q_LMTD = H * A * dt_lm #*F
 
     #Ensure energy balance
