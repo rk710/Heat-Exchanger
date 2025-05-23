@@ -108,7 +108,7 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     delta_p_noz_1 = rho_w * v_noz_1**2
     R_L = 0.2655
     S_w = 0.33 * np.pi * d_sh**2 / 4
-    N_CW = 0.8 * 1 #set to 1 tube in window atm, can change
+    N_CW = 0.8 * 4 #set to 1 tube in window atm, can change
     delta_p_window = N_B * R_L * (2+0.6*N_CW) * m_dot_1**2 / (2 * rho_w * A_sh * S_w)
     delta_p_1 = (delta_p_sh + delta_p_noz_1 + delta_p_window)/100000
     return delta_p_1, delta_p_2 #Return (delta_p_1, delta_p_2) in bar
@@ -168,6 +168,8 @@ def F_1_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
 
     if (1-P) <= 0 or (1-P*R) <= 0 or R <= 0 or P <= 0:
         return 1e-6 #invalid range
+    if abs(R - 1) < 1e-8:
+        return 1e-6
 
     F = math.sqrt(R**2 + 1)/(R-1) * np.log10((1-P)/(1-P*R)) / (np.log10(((2/P) - 1 - R + math.sqrt(R**2 + 1))/((2/P) - 1 - R - math.sqrt(R**2 + 1))))
     return F
@@ -228,14 +230,14 @@ def search(x):
     T_hot_in = constants["T_hot_in"]
     Cp = constants["Cp"]
 
-    N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y, N_rows = x
-    N_tubes_per_pass = int(round(N_tubes_per_pass))
-    N_tube_passes = int(round(N_tube_passes))
-    N_shell_passes = int(round(N_shell_passes))
+    N_tube_passes = 2
+    N_shell_passes = 2
+    N_rows = 5
+    Y = 0.012
+
+    N_tubes_per_pass, N_B = x
     N_B = int(round(N_B))
-    N_rows = int(round(N_rows))
-    #N_tube = int(round(N_tube))
-    #N_shell = int(round(N_shell))
+    N_tubes_per_pass = int(round(N_tubes_per_pass))
 
     m_dot_1_init = constants["m_dot_1_init"]
     m_dot_2_init = constants["m_dot_2_init"]
@@ -246,14 +248,10 @@ def search(x):
     f_a = heat_balance(T_cold_in + 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
     f_b = heat_balance(T_hot_in - 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
 
+    print(f_a, f_b)
+
     if f_a * f_b > 0:
         print("No sign change in bracket, skipping this configuration.")
-        return 1e6
-    
-    if N_shell_passes > 2 and N_tube_passes != N_shell_passes or N_tube_passes % 2 != 0 and N_shell_passes < 3:
-        return 1e6 #to avoid undesired results
-    
-    if N_rows > N_tubes_per_pass:
         return 1e6
 
     heat_calculation = root_scalar(
@@ -277,7 +275,7 @@ def search(x):
         return 1e6
 
 #Bounds for outlet temperatures, must lie between inlet temps
-bounds = [(1, 20), (1,8), (1, 4), (0, 20), (0.012, 0.02), (1,5)]
+bounds = [(1, 18), (1,20)]
 
 if __name__ == "__main__":
 
@@ -287,6 +285,10 @@ if __name__ == "__main__":
 
 
 #square, Q_max = 13083. triangular = 14131
+#1sp 1tb Q_max = 15926, 18 tubes 3 baffle
+#1sp 2tb Q_max = 26584, 18 tubes 2 baffle
+#2sp 1tb Q_max = 26556, 18 tubes 1 baffle
+#2sp 2tb Q_max = 27005, 18 tubes 1 baffle
 
 #correction factor F needed for multiple passes (whenever not in counterflow)
 #dp_ends varies with tube passes
