@@ -39,6 +39,7 @@ constants = {
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
     "N_tube_passes": 1,
     "N_tubes_per_pass": 13,
+    "N_shell_passes": 1
     
 }
 
@@ -250,7 +251,7 @@ def search(x):
         return 1e6
 
 #Bounds for outlet temperatures, must lie between inlet temps
-bounds = [(1, 20), (0, 20), (0.008, 0.02)]
+bounds = [(1, 20), (1,8), (1, 4), (0, 20), (0.008, 0.02)]
 
 if __name__ == "__main__":
 
@@ -265,3 +266,5 @@ if __name__ == "__main__":
 #dp_ends varies with tube passes
 #d_chich_sh varies with shell passes
 #add baffle losses
+
+#reynolds dependance for baffle loss on  cold side
