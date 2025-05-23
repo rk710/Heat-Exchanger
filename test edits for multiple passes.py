@@ -293,4 +293,8 @@ if __name__ == "__main__":
 #d_chich_sh varies with shell passes
 #add baffle losses
 
-#reynolds dependance for baffle loss on  cold side
+#reynolds dependance for baffle loss on cold side
+#how do local velocites change (esp at cold entrance)
+
+#pitch minimum at 12mm or more
+
