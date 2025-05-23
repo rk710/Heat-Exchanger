@@ -39,7 +39,8 @@ constants = {
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
     "N_tube_passes": 1,
     "N_tubes_per_pass": 13,
-    "N_shell_passes": 1
+    "N_shell_passes": 1,
+    "N_rows": 3,
     
 }
 
@@ -77,6 +78,7 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     d_sh = constants["d_sh"]
     d_o = constants["d_o"]
     L = constants ["L"]
+    N_rows = constants["N_rows"]
     B = L/(N_B+1) #baffle spacing
 #m_dot_tube edited
     m_dot_tube = m_dot_2/N_tubes_per_pass
@@ -102,7 +104,7 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     Re_sh = Re_sh_calc(m_dot_1, N_B, Y, N_shell_passes)                  
     alpha = 0.2 #0.2 triangular pitch, 0.34 square
 #edited delta_p_sh
-    delta_p_sh = 4*alpha*Re_sh**-0.15 *(N_tube_passes*N_tubes_per_pass/N_shell_passes)*rho_w*v_sh**2
+    delta_p_sh = 4*alpha*Re_sh**-0.15 *N_rows*N_shell_passes*rho_w*v_sh**2*(N_B+1) #FIX NEEDED CURRRENTLY ASSUMING 3 TUBE ROWS MAY NOT BE OPTIMAL
     v_noz_1 = m_dot_1*4/ (rho_w*np.pi*d_noz**2)
     delta_p_noz_1 = rho_w * v_noz_1**2
     delta_p_1 = (delta_p_sh + delta_p_noz_1)/100000
@@ -161,12 +163,18 @@ def F_1_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
     P = (T_cold_out-T_cold_in)/(T_hot_in-T_cold_in)
     R = (T_hot_in-T_hot_out)/(T_cold_out-T_cold_in)
 
+    if (1-P) <= 0 or (1-P*R) <= 0 or R <= 0 or P <= 0:
+        return 1e-6 #invalid range
+
     F = math.sqrt(R**2 + 1)/(R-1) * np.log10((1-P)/(1-P*R)) / (np.log10(((2/P) - 1 - R + math.sqrt(R**2 + 1))/((2/P) - 1 - R - math.sqrt(R**2 + 1))))
     return F
 
 def F_2_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out):
     P = (T_cold_out-T_cold_in)/(T_hot_in-T_cold_in)
     R = (T_hot_in-T_hot_out)/(T_cold_out-T_cold_in)
+
+    if (1-P) <= 0 or (1-P*R) <= 0 or R <= 0 or P <= 0:
+        return 1e-6 #invalid range
 
     F = math.sqrt(R**2 + 1)/(2*(R-1)) * np.log10((1-P)/(1-P*R)) / (np.log10(((2/P) - 1 - R + (2/P) * math.sqrt((1-P)*(1-P*R)) + math.sqrt(R**2 + 1))/((2/P) - 1 - R + (2/P) * math.sqrt((1-P)*(1-P*R)) - math.sqrt(R**2 + 1))))
     return F
@@ -189,28 +197,26 @@ def Thermal_analysis(Re_tube, Re_sh, N_tubes_per_pass, N_tube_passes):
     A = N_tubes_per_pass * N_tube_passes * np.pi * d_i * L
     return H, A
 
-def heat_balance(T_cold_out, m_dot_1, m_dot_2, T_cold_in, T_hot_in, H, A):
+def heat_balance(T_cold_out, m_dot_1, m_dot_2, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes):
     Cp = constants["Cp"]
     Q1 = m_dot_1 * Cp * (T_cold_out - T_cold_in)
     T_hot_out = T_hot_in - Q1 / (m_dot_2 * Cp)
 
     dt_lm = delta_T_lm_counter(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
 
-    '''if N_shell == 1 and N_tube % 2 == 0:
+    if N_shell_passes == 1 and N_tube_passes % 2 == 0:
         F = F_1_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
         Q_LMTD = H * A * dt_lm *F
 
-    elif N_shell == 2 and N_tube > 2 and N_tube % 2 == 0:
+    elif N_shell_passes == 2 and N_tube_passes > 2 and N_tube_passes % 2 == 0:
         F = F_2_2N(T_cold_in, T_cold_out, T_hot_in, T_hot_out)
         Q_LMTD = H * A * dt_lm *F
 
-    elif N_tube == N_shell:
+    elif N_tube_passes == N_shell_passes:
         Q_LMTD = H * A * dt_lm
 
-    else:
-        return 1e-6'''
-
-    Q_LMTD = H * A * dt_lm
+    else: #Must add 3/4 shell passes
+        return 1e6
     
     return Q1 - Q_LMTD  # We want this to be zero
 
@@ -219,7 +225,6 @@ def search(x):
     T_hot_in = constants["T_hot_in"]
     Cp = constants["Cp"]
 
-#not enough values to unpack (expected 5, got 3) error
     N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y = x
     N_tubes_per_pass = int(round(N_tubes_per_pass))
     N_tube_passes = int(round(N_tube_passes))
@@ -234,24 +239,38 @@ def search(x):
     m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y)
     H, A = Thermal_analysis(Re_tube_calc(m_dot_2_adj, int(N_tubes_per_pass)), Re_sh_calc(m_dot_1_adj, int(N_B), Y, N_shell_passes), N_tubes_per_pass, N_tube_passes)
 
+    f_a = heat_balance(T_cold_in + 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
+    f_b = heat_balance(T_hot_in - 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
+
+    if f_a * f_b > 0:
+        print("No sign change in bracket, skipping this configuration.")
+        return 1e6
+    
+    if N_shell_passes > 2 and N_tube_passes != N_shell_passes or N_tube_passes % 2 != 0 and N_shell_passes < 3:
+        return 1e6 #to avoid undesired results
+
     heat_calculation = root_scalar(
         heat_balance, 
-        args=(m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A),
+        args=(m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes),
         bracket=[T_cold_in + 1e-3, T_hot_in - 1e-3],
         method='brentq',
     )
-    print (m_dot_1_adj, m_dot_2_adj)
+
+    print(f"Cold mass flow: {m_dot_1_adj}, Hot mass flow: {m_dot_2_adj}")
+
     if heat_calculation.converged:
         T_cold_out = heat_calculation.root
         Q = m_dot_1_adj * Cp * (T_cold_out-T_cold_in)
         T_hot_out = T_hot_in - Q / (m_dot_2_adj * Cp)
         print(T_cold_out, T_hot_out)
+        if T_cold_out>T_hot_out:
+            return 1e6 #invalid solution
         return -Q
     else:
         return 1e6
 
 #Bounds for outlet temperatures, must lie between inlet temps
-bounds = [(1, 20), (1,8), (1, 4), (0, 20), (0.008, 0.02)]
+bounds = [(1, 20), (1,8), (1, 4), (0, 20), (0.012, 0.02)]
 
 if __name__ == "__main__":
 
