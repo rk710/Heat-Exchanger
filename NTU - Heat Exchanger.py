@@ -84,6 +84,9 @@ e_1 = 2 / ( (1+C_rel+math.sqrt(1+(C_rel)**2)) * (1 + math.exp((-NTU)*math.sqrt(1
 #N shell passes, 2N,4N,6N tube passes
 e = ((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - 1)/((((1-(e_1 * C_rel))/(1-e_1))**N_shells) - C_rel)
 
+C_1 = m_dot_1 * C_min
+C_2 = m_dot_2 * C_min
+
 Q_dot = e * Q_dot_max
 T_hot_out = T_hot_in - (Q_dot / Cp)
 T_cold_out = T_cold_in + (Q_dot / Cp)
