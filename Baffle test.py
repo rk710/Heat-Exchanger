@@ -2,47 +2,8 @@ import numpy as np
 import math
 from scipy.interpolate import interp1d
 from scipy.optimize import differential_evolution, root_scalar
-
-#Compressor data (cold side)
-cold_mass_flow = np.array([0.6580, 0.6290, 0.5830, 0.5380, 0.4670, 0.3920, 0.3210, 0.2790, 0.2210, 0.0])
-cold_pressure_rise = np.array([0.1584, 0.1958, 0.2493, 0.3127, 0.3723, 0.4436, 0.4950, 0.5318, 0.5739, 0.7077])
-cold_interp = interp1d(cold_mass_flow, cold_pressure_rise, fill_value="extrapolate")
-
-#Compressor data (hot side)
-hot_flow_lps = np.array([0.4360, 0.3870, 0.3520, 0.3110, 0.2600, 0.2290, 0.1670, 0.1180, 0.0690, 0.0010])
-hot_press_bar = np.array([0.0932, 0.1688, 0.2209, 0.2871, 0.3554, 0.4041, 0.4853, 0.5260, 0.5665, 0.6239])
-hot_interp = interp1d(hot_flow_lps, hot_press_bar, fill_value="extrapolate")
-
-#Hydraulic Design
-constants = {
-
-    "T_cold_in": 293.15,
-    "T_hot_in": 333.15,
-    "Cp": 4179,
-    "rho_w": 990.1,
-    "k_w": 0.632,
-    "mu": 0.000651,
-    "Pr": 4.31,
-    "k_tube": 386,
-    "d_sh": 0.064,
-    "d_noz": 0.02,
-    "d_i": 0.006,
-    "d_o": 0.008,
-    "m_dot_1_init": 0.5,
-    "m_dot_2_init": 0.45,
-#   "N_init": 13,
-    "N_B_init": 9,
-    "Y_init": 0.014,
-    "N_tube_init": 1,
-    "N_shell_init": 1,
-    "L": 0.35,
-    #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
-    "N_tube_passes": 1,
-    "N_tubes_per_pass": 13,
-    "N_shell_passes": 1,
-    "B_window": 1/3, #include in calcs for baffle pressure loss
-    
-}
+from constants import *
+from NTU_method import NTU_method
 
 #replaced N with N_tubes_per_pass
 def Re_tube_calc(m_dot_2, N_tubes_per_pass):
@@ -127,7 +88,7 @@ def find_flow_rates(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_p
         err_hot = abs(delta_p_2 - pressure_hot)
 
         if err_cold < tol and err_hot < tol:
-            print(f"Converged in {i} iterations")
+#            print(f"Converged in {i} iterations")
             break
 
         if pressure_cold < delta_p_1:
@@ -245,13 +206,18 @@ def search(x):
     m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y, N_rows)
     H, A = Thermal_analysis(Re_tube_calc(m_dot_2_adj, int(N_tubes_per_pass)), Re_sh_calc(m_dot_1_adj, int(N_B), Y, N_shell_passes), N_tubes_per_pass, N_tube_passes)
 
+#    C_min = min(m_dot_1_adj, m_dot_2_adj) * Cp
+#    C_max = min(m_dot_1_adj, m_dot_2_adj) * Cp
+#    C_rel = C_min/C_max
+#    Q_dot_max = C_min * (T_hot_in - T_cold_in)
+
     f_a = heat_balance(T_cold_in + 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
     f_b = heat_balance(T_hot_in - 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
 
-    print(f_a, f_b)
+#    print(f_a, f_b)
 
     if f_a * f_b > 0:
-        print("No sign change in bracket, skipping this configuration.")
+#        print("No sign change in bracket, skipping this configuration.")
         return 1e6
 
     heat_calculation = root_scalar(
@@ -261,15 +227,17 @@ def search(x):
         method='brentq',
     )
 
-    print(f"Cold mass flow: {m_dot_1_adj}, Hot mass flow: {m_dot_2_adj}")
+    print(f"Cold mass flow: {round(m_dot_1_adj, 4)}, Hot mass flow: {round(m_dot_2_adj, 4)}")
+    print("H = ", H, "A = ",A)
 
     if heat_calculation.converged:
         T_cold_out = heat_calculation.root
         Q = m_dot_1_adj * Cp * (T_cold_out-T_cold_in)
         T_hot_out = T_hot_in - Q / (m_dot_2_adj * Cp)
-        print(T_cold_out, T_hot_out)
+#        print(round(T_cold_out-273.15,4), round(T_hot_out-273.15, 4))
         if T_cold_out>T_hot_out:
             return 1e6 #invalid solution
+#        return -Q, C_rel, Q_dot_max, H, A, N_shell_passes
         return -Q
     else:
         return 1e6
@@ -279,9 +247,18 @@ bounds = [(1, 18), (1,20)]
 
 if __name__ == "__main__":
 
-    result = differential_evolution(search, bounds, tol=1e-6)
-    print(result.x)
-    print("Q_max:", -result.fun)
+    #result = differential_evolution(search, bounds, tol=1e-6)
+    #print(result.x)
+    #Q_dot_LMTD = -result.fun
+    #print("Q_max:", Q_dot_LMTD)
+    m_dot_cold = 0.726
+    m_dot_hot = 0.462
+    H = 3992.3
+    A = 0.2375
+    N_shell_passes = 2
+    Q_dot_eNTU = NTU_method(m_dot_cold, m_dot_hot, H, A, N_shell_passes)
+    print("Q_dot (ENTU):", Q_dot_eNTU)
+    
 
 
 #square, Q_max = 13083. triangular = 14131
