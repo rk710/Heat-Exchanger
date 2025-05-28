@@ -24,7 +24,7 @@ constants = {
     "Y": 0.012,
     "N_tube_init": 1,
     "N_shell_init": 1,
-    "L": 0.236,
+    "L": 0.25,
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
     "N_B": 8,
     "N_tube_passes": 2,

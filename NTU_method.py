@@ -32,10 +32,10 @@ def NTU_method(m_dot_1, m_dot_2, H, A, N_shells):
     print("C_rel =", round(C_rel, 4))
     #1 shell pass, 2,4,6 tube passes
     e = 2 / ( 1+C_rel+((math.sqrt(1+(C_rel)**2)) * (1 + math.exp((-NTU)*math.sqrt(1+(C_rel)**2))) / (1 - math.exp((-NTU)*math.sqrt(1+(C_rel)**2)))))
-    print("1st e:", e)
+    #print("1st e:", e)
     if N_shells != 1:
         #N shell passes, 2N,4N,6N tube passes
         e = ((((1-(e * C_rel))/(1-e))**N_shells) - 1)/((((1-(e * C_rel))/(1-e))**N_shells) - C_rel)
-        print("2nd e:", e)
+        #print("2nd e:", e)
     Q_dot = e * C_min * (T_hot_in - T_cold_in)
     return Q_dot
