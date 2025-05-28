@@ -6,8 +6,8 @@ from scipy.optimize import differential_evolution, root_scalar
 #Hydraulic Design
 constants = {
 
-    "T_cold_in": 293.15,
-    "T_hot_in": 333.15,
+    "T_cold_in": 23.7 + 273.15,
+    "T_hot_in": 55.5 + 273.15,
     "Cp": 4179,
     "rho_w": 990.1,
     "k_w": 0.632,
@@ -20,19 +20,21 @@ constants = {
     "d_o": 0.008,
     "m_dot_1_init": 0.5,
     "m_dot_2_init": 0.45,
-#   "N_init": 13,
     "N_B_init": 9,
     "Y": 0.012,
     "N_tube_init": 1,
     "N_shell_init": 1,
-    "L": 0.35,
+    "L": 0.236,
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
+    "N_B": 8,
     "N_tube_passes": 2,
-    "N_tubes_per_pass": 13,
-    "N_shell_passes": 2,
-    "N_rows": 5,
-    "B_window": 1/3, #include in calcs for baffle pressure loss
-    "Year": 2025
+    "N_tubes_per_pass": 5,
+    "N_shell_passes": 1,
+    "N_rows": 4,
+    "B_window": 0.25, #include in calcs for baffle pressure loss
+    "Year": 2023,
+    "m_dot_1": 0.6,
+    "m_dot_2": 0.382,
     
 }
 
@@ -56,7 +58,7 @@ elif Year == 2024:
 
     #Compressor data (hot side)
     hot_flow_lps = np.array([0.4826, 0.4340, 0.3924, 0.3507, 0.3021, 0.2535, 0.1979, 0.1493, 0.1111, 0.0694])
-    hot_press_bar = np.array([0.0944, 0.1662, 0.2297, 0.2820, 0.3294, 0.3856, 0.4447 0.5006, 0.5311, 0.5615])
+    hot_press_bar = np.array([0.0944, 0.1662, 0.2297, 0.2820, 0.3294, 0.3856, 0.4447, 0.5006, 0.5311, 0.5615])
     hot_interp = interp1d(hot_flow_lps, hot_press_bar, fill_value="extrapolate")
 
 elif Year == 2023:
@@ -77,6 +79,6 @@ elif Year == 2022:
     cold_interp = interp1d(cold_mass_flow, cold_pressure_rise, fill_value="extrapolate")
 
     #Compressor data (hot side)
-    hot_flow_lps = np.array([0.4583, 0.4236, 0.4010, 0.3611, 0.3125, 0.2639, 0.2222,, 0.1597, 0.1181, 0.0694])
+    hot_flow_lps = np.array([0.4583, 0.4236, 0.4010, 0.3611, 0.3125, 0.2639, 0.2222, 0.1597, 0.1181, 0.0694])
     hot_press_bar = np.array([0.1333, 0.1756, 0.2024, 0.2577, 0.3171, 0.3633, 0.4233, 0.4784, 0.5330, 0.5715])
     hot_interp = interp1d(hot_flow_lps, hot_press_bar, fill_value="extrapolate")
