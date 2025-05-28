@@ -35,7 +35,7 @@ constants = {
     "Y_init": 0.013,
     "N_tube_init": 1,
     "N_shell_init": 1,
-    "L": 0.2,
+    "L": 0.25,
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
     "N_tube_passes": 1,
     "N_tubes_per_pass": 13,
@@ -78,8 +78,8 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     d_sh = constants["d_sh"]
     d_o = constants["d_o"]
     L = constants ["L"]
-    B = L/(N_B+1) #baffle spacing
     A_hose = np.pi * 0.25 * 0.025**2
+    B = L/(N_B+1) #baffle spacing
 #m_dot_tube edited
     m_dot_tube = m_dot_2/N_tubes_per_pass
     v_tube = m_dot_tube*4/(rho_w*np.pi*d_i**2)
@@ -98,9 +98,9 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     delta_p_noz_2 = rho_w * v_noz_2**2
     v_hose_max = 0.436 / (rho_w * A_hose)
     k_hose = 9320 / (0.5 * rho_w * v_hose_max**2)
-    v_hose = m_dot_2 / (rho_w * A_hose)
-    delta_p_hose = 0.5 * rho_w * v_hose**2 * k_hose
-    delta_p_2 = (delta_p_tube + delta_p_ends + delta_p_noz_2)/100000 #gives pressure in bar
+    v_hose_2 = m_dot_2 / (rho_w * A_hose)
+    delta_p_hose_2 = 0.5 * rho_w * v_hose_2**2 * k_hose
+    delta_p_2 = (delta_p_tube + delta_p_ends + delta_p_noz_2+delta_p_hose_2)/100000 #gives pressure in bar
 
     #Cold side analysis
 #A_sh edited
@@ -121,16 +121,16 @@ def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_pass
     delta_p_sh = f * G_s**2 * (N_B*N_shell_passes  + 1) * d_sh / (2 * rho_w * D_e)
     v_hose_max = 0.658 / (rho_w * A_hose)
     k_hose = 15840 / (0.5 * rho_w * v_hose_max**2)
-    v_hose = m_dot_1 / (rho_w * A_hose)
-    delta_p_hose = 0.5 * rho_w * v_hose**2 * k_hose
-    delta_p_1 = (delta_p_sh + delta_p_noz_1 + delta_p_hose)/100000
+    v_hose_1 = m_dot_1 / (rho_w * A_hose)
+    delta_p_hose_1 = 0.5 * rho_w * v_hose_1**2 * k_hose
+    delta_p_1 = (delta_p_sh + delta_p_noz_1 + delta_p_hose_1)/100000
     return delta_p_1, delta_p_2 #Return (delta_p_1, delta_p_2) in bar
 
-def find_flow_rates(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y, N_rows, tol=1e-3, max_iter=1000):
+def find_flow_rates(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y, tol=1e-3, max_iter=1000):
     rho_w = constants["rho_w"]
 
     for i in range(max_iter):
-        delta_p_1, delta_p_2 = heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y, N_rows)
+        delta_p_1, delta_p_2 = heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y)
         l_dot_1 = m_dot_1/(rho_w/1000)
         l_dot_2 = m_dot_2/(rho_w/1000)
         pressure_cold = float(cold_interp(l_dot_1))
@@ -243,10 +243,9 @@ def search(x):
     T_hot_in = constants["T_hot_in"]
     Cp = constants["Cp"]
 
-    N_tubes_per_pass = 8
+    N_tubes_per_pass = 6
     N_tube_passes = 2
     N_shell_passes = 2
-    N_rows = 4
     Y = 0.013
 
     N_B = x
@@ -255,7 +254,7 @@ def search(x):
     m_dot_1_init = constants["m_dot_1_init"]
     m_dot_2_init = constants["m_dot_2_init"]
     
-    m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y, N_rows)
+    m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y)
     H, A = Thermal_analysis(Re_tube_calc(m_dot_2_adj, int(N_tubes_per_pass)), Re_sh_calc(m_dot_1_adj, int(N_B), Y, N_shell_passes), N_tubes_per_pass, N_tube_passes)
 
     f_a = heat_balance(T_cold_in + 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
@@ -295,6 +294,7 @@ if __name__ == "__main__":
     result = differential_evolution(search, bounds, tol=1e-6)
     print(result.x)
     print("Q_max:", -result.fun)
+
 
 
 #square, Q_max = 13083. triangular = 14131
