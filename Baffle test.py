@@ -265,18 +265,20 @@ bounds = [(1, 6), (1,20)]
     print("Q_dot (ENTU):", Q_dot_eNTU)'''
 
 Q_LMTD = []
+Q_LMTD_2_1 = []
+Q_LMTD_2_2 = []
 Q_ENTU = []
 N_tubes_per_pass_array = []
 N_B_array = []
     
-for i in range(12):
+for i in range(3):
     T_cold_in = constants["T_cold_in"]
     T_hot_in = constants["T_hot_in"]
     Cp = constants["Cp"]
     Y = constants["Y"]
-    N_tubes_per_pass = i+1
-    N_tube_passes = 1
-    N_shell_passes = 1
+    N_shell_passes = 2
+    N_tube_passes = (i+1)*2
+    N_tubes_per_pass = int(round(12/N_tube_passes))
     for j in range(15):
         N_B = j+1
         if i == 0:
@@ -285,7 +287,7 @@ for i in range(12):
             pass
         m_dot_1_init = constants["m_dot_1_init"]
         m_dot_2_init = constants["m_dot_2_init"]
-        
+            
         m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y)
         H, A = Thermal_analysis(Re_tube_calc(m_dot_2_adj, int(N_tubes_per_pass)), Re_sh_calc(m_dot_1_adj, int(N_B), Y, N_shell_passes), N_tubes_per_pass, N_tube_passes)
 
@@ -308,24 +310,17 @@ for i in range(12):
             Q = m_dot_1_adj * Cp * (T_cold_out-T_cold_in)
             T_hot_out = T_hot_in - Q / (m_dot_2_adj * Cp)
             print(Q)
-        
+            
         Q_LMTD.append(Q)
 
-
-Q_LMTD_2D = np.reshape(Q_LMTD, (12, 15))
-
-# x-axis: tubes per pass
-N_tubes_per_pass_array = np.arange(1, 13)
-
-# Plot for each baffle configuration
-plt.figure(figsize=(12, 6))
-
-for baffle_idx in range(15):
-    plt.plot(N_tubes_per_pass_array, Q_LMTD_2D[:, baffle_idx], label=f'Baffles={baffle_idx+1} (LMTD)', linestyle='-')
-
-plt.xlabel('Number of Tubes per Pass')
+plt.figure(figsize=(12,6))
+plt.plot(N_B_array, Q_LMTD[0:15])
+plt.plot(N_B_array, Q_LMTD[15:30])
+plt.plot(N_B_array, Q_LMTD[30:45])
+#plt.plot(N_B_array, Q_LMTD[45:60])
+plt.xlabel('Number of baffles')
 plt.ylabel('Heat Transfer Rate Q (W)')
-plt.legend(loc='upper left', fontsize='small', ncol=2)
+plt.legend(["2 Tube Passes 2 Shell Passes", "4 Tube Passes 2 Shell Passes", "6 Tube Passes 2 Shell Passes"], loc='upper left')
 plt.grid(True)
 plt.tight_layout()
 plt.show()
