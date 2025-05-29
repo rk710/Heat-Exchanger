@@ -24,11 +24,14 @@ def NTU_method(m_dot_1, m_dot_2, H, A, N_shells):
     T_hot_in = constants["T_hot_in"]
     T_cold_in = constants["T_cold_in"]
     NTU = (H * A) / Cp
+    print("NTU =", round(NTU, 4))
+    #print("mdot1 = ", m_dot_1, " mdot2 = ", m_dot_2)
     C_min = min(m_dot_1, m_dot_2) * Cp
     C_max = max(m_dot_1, m_dot_2) * Cp
     C_rel = C_min / C_max
+    print("C_rel =", round(C_rel, 4))
     #1 shell pass, 2,4,6 tube passes
-    e = 2 / ( (1+C_rel+math.sqrt(1+(C_rel)**2)) * (1 + math.exp((-NTU)*math.sqrt(1+(C_rel)**2))) / (1 - math.exp((-NTU)*math.sqrt(1+(C_rel)**2))))
+    e = 2 / ( 1+C_rel+((math.sqrt(1+(C_rel)**2)) * (1 + math.exp((-NTU)*math.sqrt(1+(C_rel)**2))) / (1 - math.exp((-NTU)*math.sqrt(1+(C_rel)**2)))))
     #print("1st e:", e)
     if N_shells != 1:
         #N shell passes, 2N,4N,6N tube passes

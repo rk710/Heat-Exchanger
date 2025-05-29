@@ -6,8 +6,8 @@ from scipy.optimize import differential_evolution, root_scalar
 #Hydraulic Design
 constants = {
 
-    "T_cold_in": 293.15,
-    "T_hot_in": 333.15,
+    "T_cold_in": 23.7 + 273.15,
+    "T_hot_in": 55.5 + 273.15,
     "Cp": 4179,
     "rho_w": 990.1,
     "k_w": 0.632,
@@ -20,19 +20,21 @@ constants = {
     "d_o": 0.008,
     "m_dot_1_init": 0.5,
     "m_dot_2_init": 0.45,
-#   "N_init": 13,
     "N_B_init": 9,
     "Y": 0.012,
     "N_tube_init": 1,
     "N_shell_init": 1,
     "L": 0.25,
     #### NO LONGER DEFINE N tubes, but N = N tubes/pass * N tube passes ###
+    "N_B": 8,
     "N_tube_passes": 2,
-    "N_tubes_per_pass": 13,
-    "N_shell_passes": 2,
-    "N_rows": 5,
-    "B_window": 1/3, #include in calcs for baffle pressure loss
-    "Year": 2025
+    "N_tubes_per_pass": 5,
+    "N_shell_passes": 1,
+    "N_rows": 4,
+    "B_window": 0.25, #include in calcs for baffle pressure loss
+    "Year": 2023,
+    "m_dot_1": 0.6,
+    "m_dot_2": 0.382,
     
 }
 
