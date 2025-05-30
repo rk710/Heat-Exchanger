@@ -264,7 +264,7 @@ bounds = [(1, 6), (1,20)]
     Q_dot_eNTU = NTU_method(m_dot_1_adj, m_dot_2_adj, H, A, N_shell_passes)
     print("Q_dot (ENTU):", Q_dot_eNTU)'''
 
-Q_LMTD = []
+'''Q_LMTD = []
 Q_LMTD_2_1 = []
 Q_LMTD_2_2 = []
 Q_ENTU = []
@@ -323,7 +323,47 @@ plt.ylabel('Heat Transfer Rate Q (W)')
 plt.legend(["2 Tube Passes 2 Shell Passes", "4 Tube Passes 2 Shell Passes", "6 Tube Passes 2 Shell Passes"], loc='upper left')
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+plt.show()'''
+
+T_cold_in = constants["T_cold_in"]
+T_hot_in = constants["T_hot_in"]
+Cp = constants["Cp"]
+
+N_tube_passes = constants["N_tube_passes"]
+N_shell_passes = constants["N_shell_passes"]
+N_B = constants["N_B"]
+N_tubes_per_pass = constants["N_tubes_per_pass"]
+Y = constants["Y"]
+
+m_dot_1_init = constants["m_dot_1_init"]
+m_dot_2_init = constants["m_dot_2_init"]
+    
+m_dot_1_adj, m_dot_2_adj, delta_p_1, delta_p_2, pressure_cold, pressure_hot = find_flow_rates(m_dot_1_init, m_dot_2_init, int(N_tubes_per_pass), int(N_tube_passes), int(N_shell_passes), int(N_B), Y)
+H, A = Thermal_analysis(Re_tube_calc(m_dot_2_adj, int(N_tubes_per_pass)), Re_sh_calc(m_dot_1_adj, int(N_B), Y, N_shell_passes), N_tubes_per_pass, N_tube_passes)
+
+f_a = heat_balance(T_cold_in + 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
+f_b = heat_balance(T_hot_in - 1e-3, m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes)
+
+#    print(f_a, f_b)
+
+if f_a * f_b > 0:
+        print("No sign change in bracket, skipping this configuration.")
+
+heat_calculation = root_scalar(
+    heat_balance, 
+    args=(m_dot_1_adj, m_dot_2_adj, T_cold_in, T_hot_in, H, A, N_shell_passes, N_tube_passes),
+    bracket=[T_cold_in + 1, T_hot_in - 1],
+    method='brentq',
+)
+
+print(f"Cold mass flow: {round(m_dot_1_adj, 4)}, Hot mass flow: {round(m_dot_2_adj, 4)}")
+    #print("H = ", H, "A = ",A)
+
+if heat_calculation.converged:
+    T_cold_out = heat_calculation.root
+    Q = m_dot_1_adj * Cp * (T_cold_out-T_cold_in)
+    T_hot_out = T_hot_in - Q / (m_dot_2_adj * Cp)
+    print(Q)
 
 
 
@@ -340,3 +380,9 @@ plt.show()
 #add baffle losses
 
 #reynolds dependance for baffle loss on  cold side
+
+#Group A: 13729W
+#Group B: 12938W
+#Group C: 11461W
+#Group D: 13995W
+#Group E: 12997W

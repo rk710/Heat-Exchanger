@@ -70,7 +70,7 @@ def Re_sh_calc(m_dot_1, N_B, Y, N_shell_passes):
     return Re_sh
 
 #replaced N with N_tubes_per_pass, N_tube_passes, also added N_shell_passes
-def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y, N_rows):
+def heat_exchanger_pressure_drop(m_dot_1, m_dot_2, N_tubes_per_pass, N_tube_passes, N_shell_passes, N_B, Y):
     #Hot side analysis
     rho_w = constants["rho_w"]
     d_i = constants["d_i"]
